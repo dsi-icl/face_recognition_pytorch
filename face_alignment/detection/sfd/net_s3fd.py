@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-device = torch.device("cuda:0")
 class L2Norm(nn.Module):
     def __init__(self, n_channels, scale=1.0):
         super(L2Norm, self).__init__()
@@ -14,7 +13,6 @@ class L2Norm(nn.Module):
         self.weight.data += self.scale
 
     def forward(self, x):
-        x = x.to(device)
         
         norm = x.pow(2).sum(dim=1, keepdim=True).sqrt() + self.eps
         x = x / norm * self.weight.view(1, -1, 1, 1)
@@ -70,8 +68,6 @@ class s3fd(nn.Module):
         self.conv7_2_mbox_loc = nn.Conv2d(256, 4, kernel_size=3, stride=1, padding=1)
 
     def forward(self, x):
-
-        x = x.to(device)
         
         h = F.relu(self.conv1_1(x))
         h = F.relu(self.conv1_2(h))

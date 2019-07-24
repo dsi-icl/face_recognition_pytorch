@@ -139,10 +139,7 @@ class FaceAlignment:
             detected_faces {list of numpy.array} -- list of bounding boxes, one for each face found
             in the image (default: {None})
         """
-        startTime = time.time()
-        it = self.get_landmarks_from_image(image_or_path, detected_faces)
-        print("get_lmrks_frm_img", time.time() - startTime)
-        return it
+        return self.get_landmarks_from_image(image_or_path, detected_faces)
 
     def get_landmarks_from_image(self, image_or_path, detected_faces=None):
         """Predict the landmarks for each face present in the image.
@@ -181,14 +178,13 @@ class FaceAlignment:
             return None
 
         torch.set_grad_enabled(False)
-        #print(len(detected_faces))
         landmarks = []
+        image = torch.from_numpy(image).to(self.device)
         for i, d in enumerate(detected_faces):
             center = torch.cuda.FloatTensor(
                 [d[2] - (d[2] - d[0]) / 2.0, d[3] -
                  (d[3] - d[1]) / 2.0])
             center[1] = center[1] - (d[3] - d[1]) * 0.12
-            center = center.cpu()
             scale = (d[2] - d[0] +
                      d[3] - d[1]) / self.face_detector.reference_scale
 
@@ -198,30 +194,37 @@ class FaceAlignment:
 
             inp = inp.to(self.device)
             inp.div_(255.0).unsqueeze_(0)
+            time2 = time.time()
 
             out = self.face_alignment_net(inp)[-1].detach()
             if self.flip_input:
                 out += flip(self.face_alignment_net(flip(inp))
                             [-1].detach(), is_label=True)
-            out = out.cpu()
+            #out = out.cpu()
+            time3 = time.time()
+            print("out", time3 - time2)
 
-            pts, pts_img = get_preds_fromhm(out, center, scale)
-            pts, pts_img = pts.view(68, 2) * 4, pts_img.view(68, 2)
+            # pts, pts_img = get_preds_fromhm(out, center, scale)
+            pts_img = get_preds_fromhm(out, center, scale)
+            #pts, pts_img = pts.view(68, 2) * 4, pts_img.view(68, 2)
+            pts_img = pts_img.view(68, 2)
+            time4 = time.time()
+            print("pts", time4 - time3)
 
-            if self.landmarks_type == LandmarksType._3D:
-                heatmaps = np.zeros((68, 256, 256), dtype=np.float32)
-                for i in range(68):
-                    if pts[i, 0] > 0:
-                        heatmaps[i] = draw_gaussian(
-                            heatmaps[i], pts[i], 2)
-                heatmaps = torch.from_numpy(
-                    heatmaps).unsqueeze_(0)
+            # if self.landmarks_type == LandmarksType._3D:
+            #     heatmaps = np.zeros((68, 256, 256), dtype=np.float32)
+            #     for i in range(68):
+            #         if pts[i, 0] > 0:
+            #             heatmaps[i] = draw_gaussian(
+            #                 heatmaps[i], pts[i], 2)
+            #     heatmaps = torch.from_numpy(
+            #         heatmaps).unsqueeze_(0)
 
-                heatmaps = heatmaps.to(self.device)
-                depth_pred = self.depth_prediciton_net(
-                    torch.cat((inp, heatmaps), 1)).data.cpu().view(68, 1)
-                pts_img = torch.cat(
-                    (pts_img, depth_pred * (1.0 / (256.0 / (200.0 * scale)))), 1)
+            #     heatmaps = heatmaps.to(self.device)
+            #     depth_pred = self.depth_prediciton_net(
+            #         torch.cat((inp, heatmaps), 1)).data.cpu().view(68, 1)
+            #     pts_img = torch.cat(
+            #         (pts_img, depth_pred * (1.0 / (256.0 / (200.0 * scale)))), 1)
 
             landmarks.append(pts_img.numpy())
 
