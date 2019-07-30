@@ -9,7 +9,6 @@ import datetime
 import math
 import argparse
 import numpy as np
-import time
 
 import scipy.io as sio
 import zipfile
@@ -30,7 +29,6 @@ def detect(net, img, device):
     with torch.no_grad():
         olist = net(img)
 
-    startTime = time.time()
     bboxlist = torch.cuda.FloatTensor([])
     for i in range(len(olist) // 2):
         olist[i * 2] = F.softmax(olist[i * 2], dim=1)
@@ -58,7 +56,6 @@ def detect(net, img, device):
     #bboxlist = np.array(bboxlist)
     if 0 == len(bboxlist):
         bboxlist = np.zeros((1, 5))
-    print("cinetique2", time.time() - startTime)
 
     return bboxlist
 

@@ -169,14 +169,13 @@ class FaceAlignment:
             image = image[..., :3]
 
         if detected_faces is None:
-            startTime = time.time()
             detected_faces = self.face_detector.detect_from_image(image[..., ::-1].copy())
-            print("cinetique", time.time() - startTime)
 
         if len(detected_faces) == 0:
             print("Warning: No faces were detected.")
             return None
 
+        print("On a detecte", len(detected_faces), "tetes")
         torch.set_grad_enabled(False)
         landmarks = []
         image = torch.from_numpy(image).to(self.device)
@@ -201,15 +200,15 @@ class FaceAlignment:
                 out += flip(self.face_alignment_net(flip(inp))
                             [-1].detach(), is_label=True)
             #out = out.cpu()
-            time3 = time.time()
-            print("out", time3 - time2)
+            # time3 = time.time()
+            # print("out", time3 - time2)
 
             # pts, pts_img = get_preds_fromhm(out, center, scale)
             pts_img = get_preds_fromhm(out, center, scale)
             #pts, pts_img = pts.view(68, 2) * 4, pts_img.view(68, 2)
             pts_img = pts_img.view(68, 2)
-            time4 = time.time()
-            print("pts", time4 - time3)
+            # time4 = time.time()
+            # print("pts", time4 - time3)
 
             # if self.landmarks_type == LandmarksType._3D:
             #     heatmaps = np.zeros((68, 256, 256), dtype=np.float32)
